@@ -46,6 +46,7 @@ void gamestart();
 // 新增功能函数声明
 int  userExists(const char* username);
 int  registerUser();
+int  loginUser();
 
 void Pos(int x, int y) // 设置光标位置
 {
@@ -434,6 +435,60 @@ int registerUser()
     return 1;
 }
 
+// 用户登录（返回1成功，0失败）
+int loginUser()
+{
+    char username[MAX_USERNAME];
+    char password[MAX_PASSWORD];
+    int attempts = 0;
+    const int MAX_ATTEMPTS = 3;
+
+    system("cls");
+    printf("\n\n");
+    printf("  ========== 用户登录 ==========\n\n");
+
+    while (attempts < MAX_ATTEMPTS)
+    {
+        printf("  请输入用户名: ");
+        scanf("%31s", username);
+        printf("  请输入密码: ");
+        scanf("%31s", password);
+
+        FILE* fp = fopen(USER_FILE, "r");
+        if (fp == NULL)
+        {
+            printf("  用户文件不存在，请先注册。\n");
+            return 0;
+        }
+        char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
+        int found = 0;
+        while (fscanf(fp, "%31s %31s", uname, pwd) == 2)
+        {
+            if (strcmp(uname, username) == 0 && strcmp(pwd, password) == 0)
+            {
+                found = 1;
+                break;
+            }
+        }
+        fclose(fp);
+
+        if (found)
+        {
+            strncpy(currentUser, username, MAX_USERNAME - 1);
+            printf("\n  登录成功！欢迎，%s！\n", username);
+            Sleep(1000);
+            return 1;
+        }
+        else
+        {
+            attempts++;
+            printf("  用户名或密码错误，还有3 次机会  还有 %d 次机会。\n\n", MAX_ATTEMPTS - attempts);
+        }
+    }
+    printf("  登录失败次数过多，程序退出。\n");
+    return 0;
+}
+
 int main()
 {
     system("mode con cols=100 lines=30");
@@ -462,6 +517,15 @@ int main()
             return 1;
         }
         system("pause");
+    }
+    else
+    {
+        // 非首次使用，登录验证
+        if (!loginUser())
+        {
+            system("pause");
+            return 1;
+        }
     }
 
     gamestart();
