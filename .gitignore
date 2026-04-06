@@ -1,0 +1,8 @@
+*.ncb
+*.opt
+*.ilk
+*.pch
+Debug/
+Release/
+*.user
+*.suo
