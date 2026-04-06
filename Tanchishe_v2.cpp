@@ -566,6 +566,10 @@ int loginUser()
 
 int main()
 {
+    // 设置控制台为UTF-8编码，解决中文乱码
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+
     system("mode con cols=100 lines=30");
     system("cls");
 
