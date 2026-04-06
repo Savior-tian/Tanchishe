@@ -9,6 +9,12 @@
 #define L 3
 #define R 4       // 蛇的状态：U:上 D:下 L:左 R:右
 
+// 用户相关宏定义
+#define MAX_USERNAME 32
+#define MAX_PASSWORD 32
+#define USER_FILE    "users.dat"
+#define LOG_FILE     "gamelog.dat"
+
 typedef struct SNAKE // 蛇的每一个节点
 {
     int x;
@@ -22,6 +28,7 @@ int status, sleeptime = 200;    // 每次运行的时间间隔
 snake* head, * food;            // 蛇头指针，食物指针
 snake* q;                       // 遍历蛇体时用到的指针
 int endgamestatus = 0;          // 游戏结束状态：1撞墙 2咬到自己 3主动退出游戏
+char currentUser[MAX_USERNAME] = ""; // 当前登录用户名
 
 // 声明全部函数 //
 void Pos(int x, int y);
@@ -36,6 +43,9 @@ void gamecircle();
 void welcometogame();
 void endgame();
 void gamestart();
+// 新增功能函数声明
+int  userExists(const char* username);
+int  registerUser();
 
 void Pos(int x, int y) // 设置光标位置
 {
@@ -360,8 +370,100 @@ void gamestart() // 游戏开始前
     createfood();
 }
 
+// 检查用户名是否已存在（返回1存在，0不存在）
+int userExists(const char* username)
+{
+    FILE* fp = fopen(USER_FILE, "r");
+    if (fp == NULL) return 0;
+    char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
+    while (fscanf(fp, "%31s %31s", uname, pwd) == 2)
+    {
+        if (strcmp(uname, username) == 0)
+        {
+            fclose(fp);
+            return 1;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+// 用户注册（返回1成功，0失败）
+int registerUser()
+{
+    char username[MAX_USERNAME];
+    char password[MAX_PASSWORD];
+    char confirm[MAX_PASSWORD];
+
+    system("cls");
+    printf("\n\n");
+    printf("  ========== 用户注册 ==========\n\n");
+
+    while (1)
+    {
+        printf("  请输入用户名（不超过31个字符）: ");
+        scanf("%31s", username);
+        if (userExists(username))
+            printf("  该用户名已存在，请换一个。\n");
+        else
+            break;
+    }
+
+    while (1)
+    {
+        printf("  请输入密码（不超过31个字符）: ");
+        scanf("%31s", password);
+        printf("  请再次确认密码: ");
+        scanf("%31s", confirm);
+        if (strcmp(password, confirm) == 0)
+            break;
+        printf("  两次密码不一致，请重新输入。\n");
+    }
+
+    FILE* fp = fopen(USER_FILE, "a");
+    if (fp == NULL)
+    {
+        printf("  注册失败：无法写入用户文件。\n");
+        return 0;
+    }
+    fprintf(fp, "%s %s\n", username, password);
+    fclose(fp);
+
+    printf("\n  注册成功！用户名：%s\n", username);
+    strncpy(currentUser, username, MAX_USERNAME - 1);
+    return 1;
+}
+
 int main()
 {
+    system("mode con cols=100 lines=30");
+    system("cls");
+
+    // 判断是否首次使用（无用户文件或文件为空）
+    FILE* fp = fopen(USER_FILE, "r");
+    int hasUser = 0;
+    if (fp != NULL)
+    {
+        char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
+        if (fscanf(fp, "%31s %31s", uname, pwd) == 2)
+            hasUser = 1;
+        fclose(fp);
+    }
+
+    if (!hasUser)
+    {
+        // 首次使用，强制注册
+        printf("\n  检测到您是首次使用，请先注册账户。\n\n");
+        system("pause");
+        if (!registerUser())
+        {
+            printf("  注册失败，程序退出。\n");
+            system("pause");
+            return 1;
+        }
+        system("pause");
+    }
+
     gamestart();
     gamecircle();
     endgame();
