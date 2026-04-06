@@ -285,6 +285,8 @@ void gamecircle() // 控制游戏
     printf("F1 为加速，F2 为减速");
     Pos(64, 16);
     printf("ESC :退出游戏. space:暂停游戏.");
+    Pos(64, 18);
+    printf("*** %s 正在游戏中 ***", currentUser);
 
     status = R;
     while (1)
