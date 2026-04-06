@@ -47,6 +47,8 @@ void gamestart();
 int  userExists(const char* username);
 int  registerUser();
 int  loginUser();
+void saveGameLog(int endStatus, int finalScore);
+void showGameLog();
 
 void Pos(int x, int y) // 设置光标位置
 {
@@ -285,6 +287,8 @@ void gamecircle() // 控制游戏
     printf("F1 为加速，F2 为减速");
     Pos(64, 16);
     printf("ESC :退出游戏. space:暂停游戏.");
+    Pos(64, 17);
+    printf("按F5显示游戏用户日志");
     Pos(64, 18);
     printf("*** %s 正在游戏中 ***", currentUser);
 
@@ -329,6 +333,24 @@ void gamecircle() // 控制游戏
                 if (sleeptime == 350) add = 1;
             }
         }
+        else if (GetAsyncKeyState(VK_F5))
+        {
+            showGameLog();
+            // 恢复游戏界面
+            system("cls");
+            creatMap();
+            snake* tmp = head;
+            while (tmp != NULL) { Pos(tmp->x, tmp->y); printf("■"); tmp = tmp->next; }
+            Pos(food->x, food->y); printf("★");
+            Pos(64, 10); printf("得分：%d  ", score);
+            Pos(64, 11); printf("每次食物得分：%d分", add);
+            Pos(64, 13); printf("不能穿墙，不能和到自己");
+            Pos(64, 14); printf("↑.↓.←.→分别控制蛇的移动.");
+            Pos(64, 15); printf("F1 为加速，F2 为减速");
+            Pos(64, 16); printf("ESC :退出游戏. space:暂停游戏.");
+            Pos(64, 17); printf("按F5显示游戏用户日志");
+            Pos(64, 18); printf("*** %s 正在游戏中 ***", currentUser);
+        }
         Sleep(sleeptime);
         snakemove();
     }
@@ -351,6 +373,7 @@ void welcometogame() // 开始界面
 
 void endgame() // 结束游戏
 {
+    saveGameLog(endgamestatus, score);
     system("cls");
     Pos(24, 12);
     if (endgamestatus == 1)
@@ -362,6 +385,56 @@ void endgame() // 结束游戏
     Pos(24, 13);
     printf("您的得分：%d\n", score);
     exit(0);
+}
+
+// 保存游戏日志
+void saveGameLog(int endStatus, int finalScore)
+{
+    FILE* fp = fopen(LOG_FILE, "a");
+    if (fp == NULL) return;
+
+    time_t t = time(NULL);
+    struct tm* tm_info = localtime(&t);
+    char timeStr[32];
+    strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", tm_info);
+
+    const char* reason = "未知";
+    if (endStatus == 1)      reason = "撞墙";
+    else if (endStatus == 2) reason = "和到自己";
+    else if (endStatus == 3) reason = "主动退出";
+
+    fprintf(fp, "[%s] 用户: %-20s 得分: %-6d 结局: %s\n",
+            timeStr, currentUser, finalScore, reason);
+    fclose(fp);
+}
+
+// 显示游戏日志（按F5调用）
+void showGameLog()
+{
+    system("cls");
+    printf("\n  ========== 按F5显示游戏用户日志 ==========\n\n");
+
+    FILE* fp = fopen(LOG_FILE, "r");
+    if (fp == NULL)
+    {
+        printf("  暂无游戏记录。\n");
+    }
+    else
+    {
+        char line[256];
+        int count = 0;
+        while (fgets(line, sizeof(line), fp) != NULL)
+        {
+            printf("  %s", line);
+            count++;
+        }
+        fclose(fp);
+        if (count == 0)
+            printf("  暂无游戏记录。\n");
+    }
+
+    printf("\n  按任意键返回游戏...\n");
+    system("pause>nul");
 }
 
 void gamestart() // 游戏开始前
