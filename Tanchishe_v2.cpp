@@ -3,6 +3,7 @@
 #include<windows.h>
 #include<stdlib.h>
 #include<string.h>
+#include<conio.h>
 
 #define U 1
 #define D 2
@@ -49,6 +50,7 @@ int  registerUser();
 int  loginUser();
 void saveGameLog(int endStatus, int finalScore);
 void showGameLog();
+void readPassword(char* buf, int maxLen);
 
 void Pos(int x, int y) // 设置光标位置
 {
@@ -119,26 +121,28 @@ int biteself() // 判断是否咬到了自己
 void createfood() // 随机创建食物
 {
     snake* food_1;
-    srand((unsigned)time(NULL));
     food_1 = (snake*)malloc(sizeof(snake));
-    while ((food_1->x % 2) != 0)
-    {
-        food_1->x = rand() % 52 + 2;
-    }
-    food_1->y = rand() % 24 + 1;
-    q = head;
-    while (q->next == NULL)
-    {
-        if (q->x == food_1->x && q->y == food_1->y)
+    // 确保x坐标为偶数（2,4,...,52），y在边界内
+    do {
+        food_1->x = (rand() % 26 + 1) * 2;
+        food_1->y = rand() % 24 + 1;
+        // 检查是否与蛇体重合
+        int overlap = 0;
+        q = head;
+        while (q != NULL)
         {
-            free(food_1);
-            createfood();
+            if (q->x == food_1->x && q->y == food_1->y)
+            {
+                overlap = 1;
+                break;
+            }
+            q = q->next;
         }
-        q = q->next;
-    }
+        if (!overlap) break;
+    } while (1);
     Pos(food_1->x, food_1->y);
     food = food_1;
-    printf("★");
+    printf("$");
 }
 
 void cantcrosswall() // 不能穿墙
@@ -446,6 +450,34 @@ void gamestart() // 游戏开始前
     createfood();
 }
 
+// 隐式读入密码，将输入显示为 *
+void readPassword(char* buf, int maxLen)
+{
+    int i = 0;
+    int ch;
+    while (i < maxLen - 1)
+    {
+        ch = _getch();
+        if (ch == '\r' || ch == '\n') break; // 回车结束
+        if (ch == '\b' || ch == 127)          // 退格
+        {
+            if (i > 0)
+            {
+                i--;
+                printf("\b \b"); // 擦除屏幕上的 *
+            }
+            continue;
+        }
+        if (ch >= 32 && ch <= 126) // 可打印字符
+        {
+            buf[i++] = (char)ch;
+            printf("*");
+        }
+    }
+    buf[i] = '\0';
+    printf("\n");
+}
+
 // 检查用户名是否已存在（返回1存在，0不存在）
 int userExists(const char* username)
 {
@@ -488,9 +520,9 @@ int registerUser()
     while (1)
     {
         printf("  请输入密码（不超过31个字符）: ");
-        scanf("%31s", password);
+        readPassword(password, MAX_PASSWORD);
         printf("  请再次确认密码: ");
-        scanf("%31s", confirm);
+        readPassword(confirm, MAX_PASSWORD);
         if (strcmp(password, confirm) == 0)
             break;
         printf("  两次密码不一致，请重新输入。\n");
@@ -527,7 +559,7 @@ int loginUser()
         printf("  请输入用户名: ");
         scanf("%31s", username);
         printf("  请输入密码: ");
-        scanf("%31s", password);
+        readPassword(password, MAX_PASSWORD);
 
         FILE* fp = fopen(USER_FILE, "r");
         if (fp == NULL)
@@ -569,6 +601,8 @@ int main()
     // 设置控制台为UTF-8编码，解决中文乱码
     SetConsoleOutputCP(65001);
     SetConsoleCP(65001);
+    // 初始化随机数种子（全局只需一次）
+    srand((unsigned)time(NULL));
 
     system("mode con cols=100 lines=30");
     system("cls");
