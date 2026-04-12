@@ -30,6 +30,8 @@ snake* head, * food;            // 蛇头指针，食物指针
 snake* q;                       // 遍历蛇体时用到的指针
 int endgamestatus = 0;          // 游戏结束状态：1撞墙 2咬到自己 3主动退出游戏
 char currentUser[MAX_USERNAME] = ""; // 当前登录用户名
+int  currentUserID = 0;              // 当前登录用户ID
+time_t gameStartTime = 0;            // 本局游戏开始时间
 
 // 声明全部函数 //
 void Pos(int x, int y);
@@ -397,18 +399,19 @@ void saveGameLog(int endStatus, int finalScore)
     FILE* fp = fopen(LOG_FILE, "a");
     if (fp == NULL) return;
 
-    time_t t = time(NULL);
-    struct tm* tm_info = localtime(&t);
-    char timeStr[32];
-    strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", tm_info);
+    // 开始时间
+    struct tm* st = localtime(&gameStartTime);
+    char startStr[32];
+    strftime(startStr, sizeof(startStr), "%Y-%m-%d %H:%M:%S", st);
 
-    const char* reason = "未知";
-    if (endStatus == 1)      reason = "撞墙";
-    else if (endStatus == 2) reason = "和到自己";
-    else if (endStatus == 3) reason = "主动退出";
+    // 持续时长（秒）
+    time_t endTime = time(NULL);
+    long duration = (long)(endTime - gameStartTime);
+    int dur_min = (int)(duration / 60);
+    int dur_sec = (int)(duration % 60);
 
-    fprintf(fp, "[%s] 用户: %-20s 得分: %-6d 结局: %s\n",
-            timeStr, currentUser, finalScore, reason);
+    fprintf(fp, "ID:%-4d 用户:%-20s 开始时间:%s 时长:%02d:%02d 得分:%-6d\n",
+            currentUserID, currentUser, startStr, dur_min, dur_sec, finalScore);
     fclose(fp);
 }
 
@@ -416,7 +419,9 @@ void saveGameLog(int endStatus, int finalScore)
 void showGameLog()
 {
     system("cls");
-    printf("\n  ========== 按F5显示游戏用户日志 ==========\n\n");
+    printf("\n  ========== 游戏用户日志 ==========\n");
+    printf("  %-6s %-20s %-21s %-8s %s\n", "ID", "用户名", "开始时间", "时长", "得分");
+    printf("  %s\n", "----------------------------------------------------------------------");
 
     FILE* fp = fopen(LOG_FILE, "r");
     if (fp == NULL)
@@ -448,6 +453,7 @@ void gamestart() // 游戏开始前
     creatMap();
     initsnake();
     createfood();
+    gameStartTime = time(NULL); // 记录游戏开始时间
 }
 
 // 隐式读入密码，将输入显示为 *
@@ -484,7 +490,8 @@ int userExists(const char* username)
     FILE* fp = fopen(USER_FILE, "r");
     if (fp == NULL) return 0;
     char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
-    while (fscanf(fp, "%31s %31s", uname, pwd) == 2)
+    int id;
+    while (fscanf(fp, "%d %31s %31s", &id, uname, pwd) == 3)
     {
         if (strcmp(uname, username) == 0)
         {
@@ -534,10 +541,23 @@ int registerUser()
         printf("  注册失败：无法写入用户文件。\n");
         return 0;
     }
-    fprintf(fp, "%s %s\n", username, password);
+    // 生成新用户ID = 当前文件中的用户数 + 1
+    int newId = 1;
+    FILE* fr = fopen(USER_FILE, "r");
+    if (fr != NULL)
+    {
+        char u[MAX_USERNAME], p[MAX_PASSWORD];
+        int id;
+        int cnt = 0;
+        while (fscanf(fr, "%d %31s %31s", &id, u, p) == 3) cnt++;
+        fclose(fr);
+        newId = cnt + 1;
+    }
+    fprintf(fp, "%d %s %s\n", newId, username, password);
     fclose(fp);
 
-    printf("\n  注册成功！用户名：%s\n", username);
+    currentUserID = newId;
+    printf("\n  注册成功！用户名：%s  ID：%d\n", username, newId);
     strncpy(currentUser, username, MAX_USERNAME - 1);
     return 1;
 }
@@ -568,8 +588,9 @@ int loginUser()
             return 0;
         }
         char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
+        int uid = 0;
         int found = 0;
-        while (fscanf(fp, "%31s %31s", uname, pwd) == 2)
+        while (fscanf(fp, "%d %31s %31s", &uid, uname, pwd) == 3)
         {
             if (strcmp(uname, username) == 0 && strcmp(pwd, password) == 0)
             {
@@ -581,15 +602,16 @@ int loginUser()
 
         if (found)
         {
+            currentUserID = uid;
             strncpy(currentUser, username, MAX_USERNAME - 1);
-            printf("\n  登录成功！欢迎，%s！\n", username);
+            printf("\n  登录成功！欢迎，%s（ID:%d）！\n", username, uid);
             Sleep(1000);
             return 1;
         }
         else
         {
             attempts++;
-            printf("  用户名或密码错误，还有3 次机会  还有 %d 次机会。\n\n", MAX_ATTEMPTS - attempts);
+            printf("  用户名或密码错误，还有 %d 次机会。\n\n", MAX_ATTEMPTS - attempts);
         }
     }
     printf("  登录失败次数过多，程序退出。\n");
@@ -612,8 +634,8 @@ int main()
     int hasUser = 0;
     if (fp != NULL)
     {
-        char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
-        if (fscanf(fp, "%31s %31s", uname, pwd) == 2)
+        int id; char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
+        if (fscanf(fp, "%d %31s %31s", &id, uname, pwd) == 3)
             hasUser = 1;
         fclose(fp);
     }
