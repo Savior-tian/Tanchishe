@@ -29,6 +29,7 @@ int status, sleeptime = 200;    // 每次运行的时间间隔
 snake* head, * food;            // 蛇头指针，食物指针
 snake* q;                       // 遍历蛇体时用到的指针
 int endgamestatus = 0;          // 游戏结束状态：1撞墙 2咬到自己 3主动退出游戏
+int afterGameChoice = 0;        // 游戏结束后的选择：1=再来一把 0=回到主界面
 char currentUser[MAX_USERNAME] = ""; // 当前登录用户名
 int  currentUserID = 0;              // 当前登录用户ID
 time_t gameStartTime = 0;            // 本局游戏开始时间
@@ -385,17 +386,59 @@ void welcometogame() // 开始界面
 void endgame() // 结束游戏
 {
     saveGameLog(endgamestatus, score);
-    system("cls");
-    Pos(24, 12);
-    if (endgamestatus == 1)
-        printf("对不起，您撞到墙了！游戏结束!");
-    else if (endgamestatus == 2)
-        printf("对不起，您咬到自己了！游戏结束!");
-    else if (endgamestatus == 3)
-        printf("您已经退出了游戏。");
-    Pos(24, 13);
-    printf("您的得分：%d\n", score);
-    exit(0);
+
+    // 释放蛇和食物内存
+    snake* tmp;
+    while (head != NULL) { tmp = head; head = head->next; free(tmp); }
+    if (food != NULL) { free(food); food = NULL; }
+    head = NULL; q = NULL;
+
+    while (1)
+    {
+        system("cls");
+        Pos(20, 9);
+        if (endgamestatus == 1)
+            printf("对不起，您撞到墙了！游戏结束！");
+        else if (endgamestatus == 2)
+            printf("对不起，您咬到自己了！游戏结束！");
+        else if (endgamestatus == 3)
+            printf("您已经退出了游戏。");
+        Pos(20, 10);
+        printf("本局得分：%d 分", score);
+        Pos(20, 12);
+        printf("1. 再来一把");
+        Pos(20, 13);
+        printf("2. 查看日志");
+        Pos(20, 14);
+        printf("3. 回到主界面");
+        Pos(20, 16);
+        printf("请选择（1-3）：");
+
+        FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+        int ch = 0;
+        scanf("%d", &ch);
+        while (getchar() != '\n');
+
+        if (ch == 1)
+        {
+            // 重置游戏变量，调用方循环重新调用 gamestart()
+            score = 0; add = 10; sleeptime = 200; endgamestatus = 0;
+            afterGameChoice = 1;
+            return;
+        }
+        else if (ch == 2)
+        {
+            showGameLog();
+            // showGameLog 结束后继续循环，重新显示结束菜单
+        }
+        else if (ch == 3)
+        {
+            score = 0; add = 10; sleeptime = 200; endgamestatus = 0;
+            afterGameChoice = 0;
+            return;
+        }
+        // 无效输入：继续循环重新显示菜单
+    }
 }
 
 // 保存游戏日志
@@ -690,9 +733,11 @@ int main()
                 system("pause");
                 break;
             }
-            gamestart();
-            gamecircle();
-            // gamecircle内部已调用endgame并重置变量，直接返回菜单
+            do {
+                afterGameChoice = 0;
+                gamestart();
+                gamecircle();
+            } while (afterGameChoice == 1);
             break;
 
         case 4: // 查看日志
