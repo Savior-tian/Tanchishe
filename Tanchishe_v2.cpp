@@ -55,6 +55,8 @@ void saveGameLog(int endStatus, int finalScore);
 void showGameLog();
 void readPassword(char* buf, int maxLen);
 void showMainMenu();
+int  strDisplayWidth(const char* s);
+void printPadded(const char* str, int displayW);
 
 void Pos(int x, int y) // 设置光标位置
 {
@@ -461,15 +463,47 @@ void saveGameLog(int endStatus, int finalScore)
     fclose(fp);
 }
 
-// 显示游戏日志（按F5调用）
+// 计算UTF-8字符串在终端中的显示列宽（CJK占2列，ASCII到1列）
+int strDisplayWidth(const char* s)
+{
+    int w = 0;
+    while (*s) {
+        unsigned char c = (unsigned char)*s;
+        if      (c < 0x80) { w += 1; s += 1; }
+        else if (c < 0xE0) { w += 1; s += 2; }
+        else if (c < 0xF0) { w += 2; s += 3; }
+        else               { w += 2; s += 4; }
+    }
+    return w;
+}
+
+// 打印字符串并用空格填充到指定显示列宽
+void printPadded(const char* str, int displayW)
+{
+    printf("%s", str);
+    int dw = strDisplayWidth(str);
+    for (int i = dw; i < displayW; i++) printf(" ");
+}
+
+// 显示游戏日志
 void showGameLog()
 {
     system("cls");
     printf("\n  ========== 游戏用户日志 ==========\n\n");
-    printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
-           "ID", "用户名", "开始时间", "时长", "得分");
-    printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
-           "------", "----------------", "---------------------", "--------", "------");
+    // 表头（每列显示宽度 = 内容宽 + 2空格间隔）
+    printf("  ");
+    printPadded("ID",                    8);
+    printPadded("用户名",                  18);
+    printPadded("开始时间",                  23);
+    printPadded("时长",                    10);
+    printf("得分\n");
+    // 分隔线
+    printf("  ");
+    printPadded("------",               8);
+    printPadded("----------------",     18);
+    printPadded("---------------------", 23);
+    printPadded("--------",             10);
+    printf("------\n");
 
     FILE* fp = fopen(LOG_FILE, "r");
     if (fp == NULL)
@@ -484,8 +518,14 @@ void showGameLog()
         while (fscanf(fp, "%d|%31[^|]|%31[^|]|%8[^|]|%d\n",
                       &uid, uname, startStr, dur, &pts) == 5)
         {
-            printf("  %-6d  %-16s  %-21s  %-8s  %d\n",
-                   uid, uname, startStr, dur, pts);
+            char idStr[12];
+            sprintf(idStr, "%d", uid);
+            printf("  ");
+            printPadded(idStr,    8);
+            printPadded(uname,   18);
+            printPadded(startStr, 23);
+            printPadded(dur,      10);
+            printf("%d\n", pts);
             count++;
         }
         fclose(fp);
@@ -493,7 +533,7 @@ void showGameLog()
             printf("  暂无游戏记录。\n");
     }
 
-    printf("\n  按任意键返回游戏...\n");
+    printf("\n  按任意键继续...\n");
     system("pause>nul");
 }
 
@@ -742,39 +782,8 @@ int main()
             break;
 
         case 4: // 查看日志
-        {
-            // 展示日志页（不需要返回游戏，直接返回菜单）
-            system("cls");
-            printf("\n  ========== 游戏用户日志 ==========\n\n");
-            printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
-                   "ID", "用户名", "开始时间", "时长", "得分");
-            printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
-                   "------", "----------------", "---------------------",
-                   "--------", "------");
-            FILE* fp = fopen(LOG_FILE, "r");
-            if (fp == NULL)
-            {
-                printf("  暂无游戏记录。\n");
-            }
-            else
-            {
-                int uid, pts;
-                char uname[MAX_USERNAME], startStr[32], dur[16];
-                int cnt = 0;
-                while (fscanf(fp, "%d|%31[^|]|%31[^|]|%8[^|]|%d\n",
-                              &uid, uname, startStr, dur, &pts) == 5)
-                {
-                    printf("  %-6d  %-16s  %-21s  %-8s  %d\n",
-                           uid, uname, startStr, dur, pts);
-                    cnt++;
-                }
-                fclose(fp);
-                if (cnt == 0) printf("  暂无游戏记录。\n");
-            }
-            printf("\n  按任意键返回菜单...\n");
-            system("pause>nul");
+            showGameLog();
             break;
-        }
 
         case 5: // 退出
             system("cls");
