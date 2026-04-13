@@ -53,6 +53,7 @@ int  loginUser();
 void saveGameLog(int endStatus, int finalScore);
 void showGameLog();
 void readPassword(char* buf, int maxLen);
+void showMainMenu();
 
 void Pos(int x, int y) // 设置光标位置
 {
@@ -616,11 +617,33 @@ int loginUser()
         else
         {
             attempts++;
-            printf("  用户名或密码错误，还有 %d 次机会。\n\n", MAX_ATTEMPTS - attempts);
+            if (attempts < MAX_ATTEMPTS)
+                printf("  用户名或密码错误，还有 %d 次机会。\n\n", MAX_ATTEMPTS - attempts);
         }
     }
-    printf("  登录失败次数过多，程序退出。\n");
+    printf("  登录失败次数过多，请重试。\n");
+    Sleep(1200);
     return 0;
+}
+
+// 主菜单
+void showMainMenu()
+{
+    system("cls");
+    printf("\n\n");
+    printf("  ==========================================\n");
+    printf("        欢迎来到 贪吃蛇游戏\n");
+    printf("  ==========================================\n\n");
+    if (currentUser[0] != '\0')
+        printf("  当前登录：%s (ID:%d)\n\n", currentUser, currentUserID);
+    else
+        printf("  显示状态：未登录\n\n");
+    printf("  1. 注册账户\n");
+    printf("  2. 登录\n");
+    printf("  3. 进入游戏\n");
+    printf("  4. 查看游戏日志 (F5)\n");
+    printf("  5. 退出\n\n");
+    printf("  请选择 [1-5]: ");
 }
 
 int main()
@@ -632,44 +655,86 @@ int main()
     srand((unsigned)time(NULL));
 
     system("mode con cols=100 lines=30");
-    system("cls");
 
-    // 判断是否首次使用（无用户文件或文件为空）
-    FILE* fp = fopen(USER_FILE, "r");
-    int hasUser = 0;
-    if (fp != NULL)
+    while (1)
     {
-        int id; char uname[MAX_USERNAME], pwd[MAX_PASSWORD];
-        if (fscanf(fp, "%d %31s %31s", &id, uname, pwd) == 3)
-            hasUser = 1;
-        fclose(fp);
-    }
+        showMainMenu();
 
-    if (!hasUser)
-    {
-        // 首次使用，强制注册
-        printf("\n  检测到您是首次使用，请先注册账户。\n\n");
-        system("pause");
-        if (!registerUser())
+        int choice = 0;
+        scanf("%d", &choice);
+        // 清除输入缓冲区
+        int c; while ((c = getchar()) != '\n' && c != EOF) {}
+
+        switch (choice)
         {
-            printf("  注册失败，程序退出。\n");
+        case 1: // 注册
+            if (!registerUser())
+                printf("\n  注册失败，请重试。\n");
             system("pause");
-            return 1;
-        }
-        system("pause");
-    }
-    else
-    {
-        // 非首次使用，登录验证
-        if (!loginUser())
-        {
-            system("pause");
-            return 1;
-        }
-    }
+            break;
 
-    gamestart();
-    gamecircle();
-    endgame();
+        case 2: // 登录
+            loginUser();
+            system("pause");
+            break;
+
+        case 3: // 进入游戏
+            if (currentUser[0] == '\0')
+            {
+                printf("\n  请先登录再进入游戏！\n");
+                system("pause");
+                break;
+            }
+            gamestart();
+            gamecircle();
+            endgame();
+            break;
+
+        case 4: // 查看日志
+        {
+            // 展示日志页（不需要返回游戏，直接返回菜单）
+            system("cls");
+            printf("\n  ========== 游戏用户日志 ==========\n\n");
+            printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
+                   "ID", "用户名", "开始时间", "时长", "得分");
+            printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
+                   "------", "----------------", "---------------------",
+                   "--------", "------");
+            FILE* fp = fopen(LOG_FILE, "r");
+            if (fp == NULL)
+            {
+                printf("  暂无游戏记录。\n");
+            }
+            else
+            {
+                int uid, pts;
+                char uname[MAX_USERNAME], startStr[32], dur[16];
+                int cnt = 0;
+                while (fscanf(fp, "%d|%31[^|]|%31[^|]|%8[^|]|%d\n",
+                              &uid, uname, startStr, dur, &pts) == 5)
+                {
+                    printf("  %-6d  %-16s  %-21s  %-8s  %d\n",
+                           uid, uname, startStr, dur, pts);
+                    cnt++;
+                }
+                fclose(fp);
+                if (cnt == 0) printf("  暂无游戏记录。\n");
+            }
+            printf("\n  按任意键返回菜单...\n");
+            system("pause>nul");
+            break;
+        }
+
+        case 5: // 退出
+            system("cls");
+            printf("\n  感谢使用，再见！\n\n");
+            return 0;
+
+        default:
+            printf("  无效选项，请输入 1-5。\n");
+            Sleep(800);
+            break;
+        }
+    }
     return 0;
 }
