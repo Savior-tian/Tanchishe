@@ -421,8 +421,7 @@ void endgame() // 结束游戏
 
         if (ch == 1)
         {
-            // 重置游戏变量，调用方循环重新调用 gamestart()
-            score = 0; add = 10; sleeptime = 200; endgamestatus = 0;
+            // 不在这里重置 endgamestatus，让 gamecircle 的 break 正常触发后再重新开始
             afterGameChoice = 1;
             return;
         }
@@ -433,7 +432,6 @@ void endgame() // 结束游戏
         }
         else if (ch == 3)
         {
-            score = 0; add = 10; sleeptime = 200; endgamestatus = 0;
             afterGameChoice = 0;
             return;
         }
@@ -501,6 +499,9 @@ void showGameLog()
 
 void gamestart() // 游戏开始前
 {
+    // 重置游戏变量（包括再来一把的情况）
+    score = 0; add = 10; sleeptime = 200; endgamestatus = 0;
+    system("cls");
     system("mode con cols=100 lines=30");
     // 刷新输入缓冲，防止主菜单残留按键触发游戏内pause()
     FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
