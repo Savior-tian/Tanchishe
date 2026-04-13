@@ -410,7 +410,7 @@ void saveGameLog(int endStatus, int finalScore)
     int dur_min = (int)(duration / 60);
     int dur_sec = (int)(duration % 60);
 
-    fprintf(fp, "ID:%-4d 用户:%-20s 开始时间:%s 时长:%02d:%02d 得分:%-6d\n",
+    fprintf(fp, "%d|%s|%s|%02d:%02d|%d\n",
             currentUserID, currentUser, startStr, dur_min, dur_sec, finalScore);
     fclose(fp);
 }
@@ -419,9 +419,11 @@ void saveGameLog(int endStatus, int finalScore)
 void showGameLog()
 {
     system("cls");
-    printf("\n  ========== 游戏用户日志 ==========\n");
-    printf("  %-6s %-20s %-21s %-8s %s\n", "ID", "用户名", "开始时间", "时长", "得分");
-    printf("  %s\n", "----------------------------------------------------------------------");
+    printf("\n  ========== 游戏用户日志 ==========\n\n");
+    printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
+           "ID", "用户名", "开始时间", "时长", "得分");
+    printf("  %-6s  %-16s  %-21s  %-8s  %s\n",
+           "------", "----------------", "---------------------", "--------", "------");
 
     FILE* fp = fopen(LOG_FILE, "r");
     if (fp == NULL)
@@ -430,11 +432,14 @@ void showGameLog()
     }
     else
     {
-        char line[256];
+        int uid, pts;
+        char uname[MAX_USERNAME], startStr[32], dur[16];
         int count = 0;
-        while (fgets(line, sizeof(line), fp) != NULL)
+        while (fscanf(fp, "%d|%31[^|]|%31[^|]|%8[^|]|%d\n",
+                      &uid, uname, startStr, dur, &pts) == 5)
         {
-            printf("  %s", line);
+            printf("  %-6d  %-16s  %-21s  %-8s  %d\n",
+                   uid, uname, startStr, dur, pts);
             count++;
         }
         fclose(fp);
