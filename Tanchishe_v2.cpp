@@ -161,6 +161,7 @@ void snakemove() // 蛇前进：上U 下D 左L 右R
 {
     snake* nexthead;
     cantcrosswall();
+    if (endgamestatus) return; // 撞墙后直接返回，不继续移动
 
     nexthead = (snake*)malloc(sizeof(snake));
     if (status == U)
@@ -267,6 +268,7 @@ void snakemove() // 蛇前进：上U 下D 左L 右R
     {
         endgamestatus = 2;
         endgame();
+        return; // 咬到自己后直接返回
     }
 }
 
@@ -320,6 +322,7 @@ void gamecircle() // 控制游戏
         else if (GetAsyncKeyState(VK_ESCAPE))
         {
             endgamestatus = 3;
+            endgame(); // ESC直接在这里处理结束
             break;
         }
         else if (GetAsyncKeyState(VK_F1))
@@ -360,6 +363,7 @@ void gamecircle() // 控制游戏
         }
         Sleep(sleeptime);
         snakemove();
+        if (endgamestatus) break; // 死亡时退出循环（endgame已在snakemove内调用）
     }
 }
 
@@ -455,7 +459,8 @@ void showGameLog()
 void gamestart() // 游戏开始前
 {
     system("mode con cols=100 lines=30");
-    welcometogame();
+    // 刷新输入缓冲，防止主菜单残留按键触发游戏内pause()
+    FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
     creatMap();
     initsnake();
     createfood();
@@ -687,7 +692,7 @@ int main()
             }
             gamestart();
             gamecircle();
-            endgame();
+            // gamecircle内部已调用endgame并重置变量，直接返回菜单
             break;
 
         case 4: // 查看日志
